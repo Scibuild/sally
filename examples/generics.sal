@@ -1,0 +1,15 @@
+
+fn drop : $a -- { -> _ }
+
+fn swap : $a $b -- $b $a { -> x -> y x y }
+
+fn dup : $a -- $a $a { -> x x x }
+
+fn over : $a $b -- $a $b $a {-> b -> a a b a}
+
+fn rot : $a $b $c -- $c $a $b {-> c -> b -> a c a b}
+
+
+fn main : -- {
+  42 "Hello, world!\t\n" swap; print-int; print;
+}

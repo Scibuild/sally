@@ -1,0 +1,57 @@
+fn print-newline : -- {
+  "\n" print;
+}
+
+fn dup : int -- int int {
+  -> x
+  x x
+}
+fn swap : int int -- int int {
+  -> x
+  -> y
+  x y
+}
+
+
+fn factorial : int -- int {
+  -> n
+  if n 0 int/eq; {
+    1
+  } else {
+    n 1 - factorial;
+    n *
+  }
+}
+
+fn drop : int -- {
+  -> _
+}
+
+fn factorial' : int -- int {
+  -> n
+  1
+  while n 0 int/eq; not; {
+    n *
+    n 1 - -> n
+  }
+}
+
+fn count-a-lot : -- {
+  1
+  while dup; 100000000 int/eq; not; {
+    1 +
+  }
+  drop;
+}
+
+fn main : -- {
+#  1 dup; + 
+#  4 2 /
+#  swap;
+#  /
+#  print-int; print-newline;
+
+  20 factorial; print-int; print-newline;
+  20 factorial'; print-int; print-newline;
+
+}

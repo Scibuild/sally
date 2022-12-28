@@ -1,0 +1,20 @@
+
+fn print-bool-ln : bool -- {
+  print-bool; "\n" print;
+}
+
+fn main : -- {
+  10 5 > print-bool;
+  "\n" print;
+
+  "hello" "world" = print-bool-ln;
+
+  "same" "same" = print-bool-ln;
+
+  5 10 != print-bool-ln;
+  
+}
+
+fn != : $a $a -- bool {
+  = not;
+}
