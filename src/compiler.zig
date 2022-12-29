@@ -11,6 +11,7 @@ pub const Opcode = enum(u8) {
     // changes the stack pointer
     op_init_stack_frame,
     // arithmetic operations pop two values off, compute the operation and push the result
+    op_inc,
     op_add_int,
     op_sub_int,
     op_mul_int,
@@ -44,6 +45,10 @@ pub const Opcode = enum(u8) {
     // pops a value from the working stack
     op_pop,
     op_swap,
+
+    op_lookup,
+    op_store,
+    op_ptr_add,
 
     // subtract the following u16 from the instruction pointer
     op_branch_backward,
@@ -299,6 +304,29 @@ pub const Compiler = struct {
                     try self.chunk.fillPlaceholderBranch16(false_branch);
                 }
             },
+            .for_stmt_concrete => |data| {
+                try self.chunk.addOpcode(.op_set_local);
+                try self.chunk.addByte(data.local);
+                try self.chunk.addOpcode(.op_set_local);
+                try self.chunk.addByte(data.local + 1);
+
+                const condition_location = self.chunk.getLocation();
+                try self.chunk.addOpcode(.op_get_local);
+                try self.chunk.addByte(data.local + 1);
+                try self.chunk.addOpcode(.op_get_local);
+                try self.chunk.addByte(data.local);
+                try self.chunk.addOpcode(.op_cmp_greater_int);
+                try self.chunk.addOpcode(.op_branch_if_false);
+                const false_branch = try self.chunk.addPlaceholderBranch16();
+                try self.compileStmts(data.body);
+                try self.chunk.addOpcode(.op_get_local);
+                try self.chunk.addByte(data.local);
+                try self.chunk.addOpcode(.op_inc);
+                try self.chunk.addOpcode(.op_set_local);
+                try self.chunk.addByte(data.local);
+                try self.chunk.addBranchBackward16(condition_location);
+                try self.chunk.fillPlaceholderBranch16(false_branch);
+            },
             .while_stmt => |data| {
                 const condition_location = self.chunk.getLocation();
                 try self.compileStmts(data.condition);
@@ -319,7 +347,9 @@ pub const Compiler = struct {
             .bpct_add_int => try self.chunk.addOpcode(.op_add_int),
             .bpct_mul_int => try self.chunk.addOpcode(.op_mul_int),
             .bpct_div_int => try self.chunk.addOpcode(.op_div_int),
-            .bpct_sub_int => try self.chunk.addOpcode(.op_sub_int),
+            .bpct_ptr_sub,
+            .bpct_sub_int,
+            => try self.chunk.addOpcode(.op_sub_int),
             .bpct_add_float => try self.chunk.addOpcode(.op_add_float),
             .bpct_mul_float => try self.chunk.addOpcode(.op_mul_float),
             .bpct_div_float => try self.chunk.addOpcode(.op_div_float),
@@ -345,10 +375,13 @@ pub const Compiler = struct {
                 try self.chunk.addOpcode(.op_cmp_greater_equal_int);
             },
             .bpct_eq => try self.chunk.addOpcode(.op_cmp_equal),
+            .bpct_ptr_lookup => try self.chunk.addOpcode(.op_lookup),
+            .bpct_ptr_store => try self.chunk.addOpcode(.op_store),
             else => {
                 try self.chunk.addConstant(@intCast(u64, @enumToInt(func)) | (1 << 63));
                 try self.chunk.addOpcode(.op_call);
             },
+            .bpct_ptr_add => try self.chunk.addOpcode(.op_ptr_add),
         }
     }
 

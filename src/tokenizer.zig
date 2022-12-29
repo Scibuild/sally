@@ -6,11 +6,13 @@ pub const TokenClass = enum {
     tk_if,
     tk_else,
     tk_while,
+    tk_for,
     tk_struct,
     tk_import,
     tk_const,
     tk_true,
     tk_false,
+    tk_type,
 
     tk_semi,
     tk_colon,
@@ -54,12 +56,14 @@ pub const Tokenizer = struct {
         .{ "if", .tk_if },
         .{ "else", .tk_else },
         .{ "while", .tk_while },
+        .{ "for", .tk_for },
         .{ "struct", .tk_struct },
         .{ "import", .tk_import },
         .{ "const", .tk_const },
         .{ "true", .tk_true },
         .{ "false", .tk_false },
         .{ "return", .tk_return },
+        .{ "type", .tk_type },
         .{ "--", .tk_minus_minus },
         .{ "->", .tk_arrow },
     });
@@ -117,17 +121,19 @@ pub const Tokenizer = struct {
                 break :brk .tk_string_lit;
             },
 
-            '0'...'9' => brk: {
-                while (self.buffer[self.index] >= '0' and self.buffer[self.index] <= '9')
-                    self.index += 1;
-                if (self.buffer[self.index] == '.') {
-                    self.index += 1;
-                    while (self.buffer[self.index] >= '0' and self.buffer[self.index] <= '9')
-                        self.index += 1;
-                    break :brk TokenClass.tk_float_lit;
-                }
-                break :brk TokenClass.tk_int_lit;
-            },
+            // '-', '0'...'9' => brk: {
+            //     if (self.buffer[self.index] == '=' and !self.)
+            //     self.index += 1;
+            //     while (self.buffer[self.index] >= '0' and self.buffer[self.index] <= '9')
+            //         self.index += 1;
+            //     if (self.buffer[self.index] == '.') {
+            //         self.index += 1;
+            //         while (self.buffer[self.index] >= '0' and self.buffer[self.index] <= '9')
+            //             self.index += 1;
+            //         break :brk TokenClass.tk_float_lit;
+            //     }
+            //     break :brk TokenClass.tk_int_lit;
+            // },
 
             else => brk: {
                 const terminating_chars = "\".;(){}\x00 \n\t";
@@ -138,12 +144,16 @@ pub const Tokenizer = struct {
                     for (terminating_chars) |tc| {
                         if (c == tc) {
                             var tok_str = self.buffer[tk_start..self.index];
-                            if (tok_str[0] == '.') {
-                                break :brk .tk_dot_ident;
-                            } else if (keywordMap.get(tok_str)) |kw| {
+                            if (keywordMap.get(tok_str)) |kw| {
                                 break :brk kw;
                             } else if (is_all_punct(tok_str)) {
                                 break :brk .tk_punct_ident;
+                            } else if (is_int(tok_str)) {
+                                break :brk .tk_int_lit;
+                            } else if (is_float(tok_str)) {
+                                break :brk .tk_float_lit;
+                            } else if (tok_str[0] == '.') {
+                                break :brk .tk_dot_ident;
                             } else {
                                 break :brk .tk_ident;
                             }
@@ -167,6 +177,36 @@ pub const Tokenizer = struct {
             }
             if (is_punct == false) return false;
         }
+        return true;
+    }
+
+    fn is_int(string: []const u8) bool {
+        var i: u32 = 0;
+        if (string[0] == '-') i += 1;
+
+        while (i < string.len) : (i += 1) {
+            if (string[i] < '0' or string[i] > '9') return false;
+        }
+
+        return true;
+    }
+
+    fn is_float(string: []const u8) bool {
+        var i: u32 = 0;
+        if (string[0] == '-') i += 1;
+
+        i += 1;
+        if (i >= string.len) return false;
+        if (string[i] < '0' or string[i] > '9') return false;
+        while (i < string.len) : (i += 1) {
+            if (string[i] == '.') break;
+            if (string[i] < '0' or string[i] > '9') return false;
+        }
+        i += 1;
+        while (i < string.len) : (i += 1) {
+            if (string[i] < '0' or string[i] > '9') return false;
+        }
+
         return true;
     }
 

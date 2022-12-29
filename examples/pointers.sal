@@ -1,0 +1,58 @@
+
+type len int
+type index int
+
+fn @[] : index ($a ptr) -- $a {
+  .+ @
+}
+
+fn ![] : $a index ($a ptr) -- {
+  .+ !
+}
+
+fn print-int-array : len (int ptr) -- {
+  -> array
+  0 for i { i array @[] print-int; ', ' print; }
+}
+
+fn append : ($a ptr) int $a -- ($a ptr) int {
+  -> v -> i -> a
+  v i a .+ !
+  a i 1 +
+}
+
+fn !, : ($a ptr) int $a -- ($a ptr) int { append; }
+
+fn dup : $a -- $a $a {
+  -> x x x
+}
+fn over : $a $b -- $a $b $a {
+  -> x -> y y x y
+}
+fn drop2 : $a $b -- { -> _ -> _' }
+
+fn ln : -- {
+  "\n" print;
+}
+
+fn main : -- {
+  1 alloc; -> myint
+  10 myint !
+  myint @ print-int; "\n" print;
+  myint free;
+
+  6 alloc; -> array
+
+  array 0
+  2  !,
+  3  !,
+  5  !,
+  7  !,
+  11 !,
+  13 !,
+  drop2;
+
+  6 array print-int-array; "\n" print;
+  array free;
+
+}

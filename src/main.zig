@@ -34,7 +34,7 @@ pub fn interpret(source: [:0]const u8, allocator: Allocator, vm: *interp.VM) !vo
     var buffered_writer = std.io.bufferedWriter(std.io.getStdOut().writer());
     var writer = buffered_writer.writer();
 
-    var elaborator = elab.Elaborator.init(source, allocator, &errors);
+    var elaborator = try elab.Elaborator.init(source, allocator, &errors);
     defer elaborator.deinit();
 
     std.debug.print("Type checking..\n", .{});

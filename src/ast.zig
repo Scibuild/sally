@@ -27,11 +27,19 @@ pub const StmtNode = struct {
             condition: []*StmtNode,
             body: []*StmtNode,
         },
+        for_stmt: struct {
+            var_name: tk.Token,
+            body: []*StmtNode,
+        },
         assign_stmt: tk.Token,
         fn_decl: struct {
             ty: *TypeNode,
             body: []*StmtNode,
             name: tk.Token,
+        },
+        type_name: struct {
+            name: tk.Token,
+            ty: *TypeNode,
         },
 
         // Bit of a hack, but we modify the ast when resolving variables
@@ -52,6 +60,11 @@ pub const StmtNode = struct {
             body: []*StmtNode,
             id: u16,
             frameSize: u8,
+        },
+
+        for_stmt_concrete: struct {
+            local: u8,
+            body: []*StmtNode,
         },
     };
 };

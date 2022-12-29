@@ -9,6 +9,10 @@ const DataPtr = values.DataPtr;
 const DataSlice = values.DataSlice;
 const ConstDataPtr = values.ConstDataPtr;
 
+const libc = @cImport({
+    @cInclude("stdlib.h");
+});
+
 const STACK_SIZE = 1 << 12; // One page     1 << 10 is 1KB,   1 << 20 is 1MB
 var program_stack = [_]u64{0} ** STACK_SIZE;
 var working_stack = [_]u64{0} ** STACK_SIZE;
@@ -146,17 +150,17 @@ pub const VM = struct {
                 .op_add_int => {
                     const b = @bitCast(i64, self.stackPop());
                     const a = @bitCast(i64, self.stackPop());
-                    self.stackPush(@bitCast(u64, a +| b));
+                    self.stackPush(@bitCast(u64, a + b));
                 },
                 .op_sub_int => {
                     const b = @bitCast(i64, self.stackPop());
                     const a = @bitCast(i64, self.stackPop());
-                    self.stackPush(@bitCast(u64, a -| b));
+                    self.stackPush(@bitCast(u64, a - b));
                 },
                 .op_mul_int => {
                     const b = @bitCast(i64, self.stackPop());
                     const a = @bitCast(i64, self.stackPop());
-                    self.stackPush(@bitCast(u64, a *| b));
+                    self.stackPush(@bitCast(u64, a * b));
                 },
                 .op_div_int => {
                     const b = @bitCast(i64, self.stackPop());
@@ -287,6 +291,24 @@ pub const VM = struct {
                     else
                         instr_ptr += 2;
                 },
+                .op_inc => {
+                    const value = self.stackPop();
+                    self.stackPush(value + 1);
+                },
+                .op_lookup => {
+                    const ptr = self.stackPop();
+                    self.stackPush(@intToPtr(*u64, ptr).*);
+                },
+                .op_store => {
+                    const ptr = self.stackPop();
+                    const val = self.stackPop();
+                    @intToPtr(*u64, ptr).* = val;
+                },
+                .op_ptr_add => {
+                    const b = self.stackPop();
+                    const a = self.stackPop();
+                    self.stackPush(@bitCast(u64, (a << 3) + b));
+                },
             }
         }
     }
@@ -314,14 +336,41 @@ pub const VM = struct {
                     self.stdout.writeAll("true") catch panic("Failed to write to stdout\n", .{});
                 }
             },
-            .bfn_int_eq => {
-                const int1 = self.stackPop();
-                const int2 = self.stackPop();
-                self.stackPush(@intCast(Value, @bitCast(u1, int1 == int2)));
+            .bfn_print_ptr => {
+                const ptr = self.stackPop();
+                self.stdout.writer().print("0x{x}", .{ptr}) catch panic("Failed to write to stdout\n", .{});
             },
             .bfn_not => {
                 const b = self.stackPop();
                 self.stackPush(b ^ 1);
+            },
+            .bfn_malloc => {
+                const size = self.stackPop();
+                // self.stackPush(@intCast(u64, @ptrToInt((self.allocator.alloc(u64, size) catch panic("Failed to allocate memory.\n", .{})).ptr)));
+                self.stackPush(@intCast(u64, @ptrToInt(libc.malloc(@intCast(c_ulong, size << 3)))));
+            },
+            .bfn_free => {
+                const ptr = self.stackPop();
+                // std.debug.print("{x}\n", .{ptr});
+                //  self.allocator.free(@intToPtr([]u64, ptr));
+                libc.free(@intToPtr(?*anyopaque, ptr));
+            },
+            .bfn_realloc => {
+                const ptr = self.stackPop();
+                const new_size = self.stackPop();
+                // self.stackPush(@intCast(u64, @ptrToInt((self.allocator.realloc(@intToPtr([]u64, ptr), new_size) catch panic("Failed to reallocate memory.\n", .{})).ptr)));
+                self.stackPush(@intCast(u64, @ptrToInt(libc.realloc(@intToPtr(?*anyopaque, ptr), @intCast(c_ulong, new_size << 3)))));
+            },
+            .bfn_mod_int => {
+                const b = @bitCast(i64, self.stackPop());
+                const a = @bitCast(i64, self.stackPop());
+                self.stackPush(@bitCast(u64, @mod(a, b)));
+            },
+            .bfn_div_mod_int => {
+                const b = @bitCast(i64, self.stackPop());
+                const a = @bitCast(i64, self.stackPop());
+                self.stackPush(@bitCast(u64, @divFloor(a, b)));
+                self.stackPush(@bitCast(u64, @mod(a, b)));
             },
 
             else => panic("Cannot run builtin function '{}'\n", .{func}),

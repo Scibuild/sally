@@ -1,6 +1,3 @@
-fn print-newline : -- {
-  "\n" print;
-}
 
 fn dup : int -- int int {
   -> x
@@ -44,6 +41,39 @@ fn count-a-lot : -- {
   drop;
 }
 
+fn dup2 : $a $b -- $a $b $a $b {
+  -> x -> y
+  y x y x
+}
+
+fn drop2 : $a $b -- {
+  -> _a -> _b
+}
+
+fn loop : int int -- int int bool {
+  dup2; if > { 1 + true } else { false }
+}
+
+fn end-loop : int int -- { drop2; }
+
+fn stars : int -- {
+  0 while loop; { "*" print; } end-loop;
+}
+
+fn over : $a $b -- $a $b $a {
+  -> x -> y y x y
+}
+
+fn factorial'' : int -- int {
+  1 -> result
+  1 while loop; { dup; result * -> result } end-loop;
+  result
+}
+
+fn ln : -- {
+  "\n" print;
+}
+
 fn main : -- {
 #  1 dup; + 
 #  4 2 /
@@ -51,7 +81,9 @@ fn main : -- {
 #  /
 #  print-int; print-newline;
 
-  20 factorial; print-int; print-newline;
-  20 factorial'; print-int; print-newline;
+  20 factorial; print-int; ln;
+  20 factorial'; print-int; ln;
+  20 factorial''; print-int; ln;
 
+  20 stars; ln;
 }

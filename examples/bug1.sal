@@ -1,0 +1,4 @@
+
+## Used to accept this code as when pushing x would give x a fresh unsolved metavariable
+fn test : $a -- ($a ptr) { -> x x}
+fn main : -- {}

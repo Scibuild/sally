@@ -1,0 +1,18 @@
+fn ln : -- { "\n" print; }
+
+fn dup : $a -- $a $a { -> x x x }
+
+fn main : -- {
+  20 factorial'''; print-int; ln;
+}
+
+fn factorial''' : int -- int {
+# 
+  dup; 1 for i { i * }
+}
+
+
+#  10 0 for i { 
+#    i print-int; 
+#    line;
+#  }

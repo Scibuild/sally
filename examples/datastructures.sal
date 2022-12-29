@@ -1,0 +1,12 @@
+
+fn array-tests : -- {
+# type of an array is written ($a array)
+
+  array/make;
+  2 array/push;
+  3 array/push;
+  5 array/push;
+  7 array/push;
+ 11 array/push;
+
+}

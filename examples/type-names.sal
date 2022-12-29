@@ -1,0 +1,11 @@
+type len int
+
+fn stars : len -- {
+  0 for _ {"*" print;}
+}
+
+fn main : -- {
+  10 stars;
+}
+
+

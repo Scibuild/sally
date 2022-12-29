@@ -135,6 +135,23 @@ pub const Parser = struct {
         return stmt;
     }
 
+    pub fn parseForStmt(self: Self) ParseError!*ast.StmtNode {
+        var stmt = try self.createStmt();
+        try self.expect(.tk_for);
+
+        var var_name = self.token;
+        try self.expect(.tk_ident);
+        try self.expect(.tk_obrace);
+        var loop_body = try self.parseStmtsUntil(.tk_cbrace);
+        stmt.end = self.token.end;
+        try self.expect(.tk_cbrace);
+        stmt.s = S{ .for_stmt = .{
+            .var_name = var_name,
+            .body = loop_body,
+        } };
+        return stmt;
+    }
+
     pub fn parseStmt(self: Self) ParseError!*ast.StmtNode {
         switch (self.token.tk) {
             .tk_if => {
@@ -142,6 +159,9 @@ pub const Parser = struct {
             },
             .tk_while => {
                 return self.parseWhileStmt();
+            },
+            .tk_for => {
+                return self.parseForStmt();
             },
             .tk_true, .tk_false => {
                 var stmt = try self.createStmtToken();
@@ -186,6 +206,15 @@ pub const Parser = struct {
                 try self.expect(.tk_arrow);
                 stmt.s = S{ .assign_stmt = self.token };
                 try self.expect(.tk_ident);
+                return stmt;
+            },
+            .tk_type => {
+                var stmt = try self.createStmt();
+                try self.expect(.tk_type);
+                const name = self.token;
+                try self.expect(.tk_ident);
+                const ty = try self.parseTypePrimary();
+                stmt.s = S{ .type_name = .{ .name = name, .ty = ty } };
                 return stmt;
             },
             .tk_fn => {
@@ -303,6 +332,7 @@ pub const Parser = struct {
                 .name = name,
                 .params = tys.toOwnedSlice(),
             } };
+            ty.end = last_ty.end;
         }
         return ty;
     }

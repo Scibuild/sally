@@ -65,6 +65,17 @@ pub const Error = union(enum) {
         start: u32,
         end: u32,
     },
+    ty_op_wrong_arity: struct {
+        want: u8,
+        got: u8,
+        start: u32,
+        end: u32,
+    },
+    unknown_ty_op: struct {
+        name: []const u8,
+        start: u32,
+        end: u32,
+    },
 
     // OTHER ERRORS
     too_many_errors,
@@ -127,6 +138,11 @@ pub fn reportErrors(errors: *Errors, source: [:0]const u8) !void {
                 location = range.start;
                 endlocation = range.end;
             },
+            .unknown_ty_op => |data| {
+                try writer.print("Unknown type operator '{s}'\n", .{data.name});
+                location = data.start;
+                endlocation = data.end;
+            },
             .invalid_stmt => |stmt| {
                 try writer.print("Invalid statement\n", .{});
                 location = stmt.start;
@@ -145,7 +161,7 @@ pub fn reportErrors(errors: *Errors, source: [:0]const u8) !void {
                         try writer.print("Cannot unify stack {} with []\n", .{s1});
                     }
                 } else {
-                    if (data.stack1) |s2| {
+                    if (data.stack2) |s2| {
                         try writer.print("Cannot unify stack [] with {}\n", .{s2});
                     } else {
                         try writer.print("Cannot unify stack [] with []\n", .{});
@@ -211,6 +227,11 @@ pub fn reportErrors(errors: *Errors, source: [:0]const u8) !void {
                 location = data.start;
                 endlocation = data.end;
             },
+            .ty_op_wrong_arity => |data| {
+                try writer.print("Operator given {} arguments but expected {}.\n", .{ data.got, data.want });
+                location = data.start;
+                endlocation = data.end;
+            },
         }
 
         if (location) |loc| {
@@ -222,7 +243,7 @@ pub fn reportErrors(errors: *Errors, source: [:0]const u8) !void {
             } else {
                 try writer.print("     |\n{d: >4} | {s}\n     |", .{ position.line, line });
             }
-            try writer.writeByteNTimes(' ', position.col);
+            try writer.writeByteNTimes(' ', position.col + 1);
             try writer.writeAll(cols.err);
             try writer.writeByteNTimes('^', (endlocation orelse loc + 1) - loc);
             try writer.writeAll(cols.end ++ "\n\n");
@@ -247,18 +268,19 @@ pub fn indexToSourceLoc(index: u32, source: [:0]const u8) SoureLoc {
     }
     return SoureLoc{
         .line = lines + 1,
-        .col = index - line_start_index + 1,
+        .col = index - line_start_index,
     };
 }
 
 pub fn lineStartForIndex(index: u32, source: [:0]const u8) u32 {
     var i = index;
+    if (i == 0) return i;
     while (i > 0) {
+        i -= 1;
         if (source[i] == '\n') {
             i += 1;
             break;
         }
-        i -= 1;
     }
 
     return i;

@@ -10,6 +10,10 @@ pub const Type = union(enum) {
         inputs: []const Type,
         outputs: []const Type,
     },
+    operator: struct {
+        name: []const u8,
+        params: []const Type,
+    },
     fixed_var: Var,
     ref: *Type,
     metavar: u32,
@@ -24,10 +28,10 @@ pub const Type = union(enum) {
 
     pub fn format(self: @This(), comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
         switch (self) {
-            .int => try writer.writeAll(col.keyword ++ "Int" ++ col.end),
-            .float => try writer.writeAll(col.keyword ++ "Float" ++ col.end),
-            .string => try writer.writeAll(col.keyword ++ "String" ++ col.end),
-            .boolean => try writer.writeAll(col.keyword ++ "Bool" ++ col.end),
+            .int => try writer.writeAll(col.keyword ++ "int" ++ col.end),
+            .float => try writer.writeAll(col.keyword ++ "float" ++ col.end),
+            .string => try writer.writeAll(col.keyword ++ "string" ++ col.end),
+            .boolean => try writer.writeAll(col.keyword ++ "bool" ++ col.end),
             .metavar => |id| {
                 try writer.print(col.number ++ "$mv_{}" ++ col.end, .{id});
             },
@@ -48,6 +52,15 @@ pub const Type = union(enum) {
                     try writer.writeByte(' ');
                     try output.format(fmt, options, writer);
                 }
+                try writer.writeByte(')');
+            },
+            .operator => |data| {
+                try writer.writeByte('(');
+                for (data.params) |param| {
+                    try param.format(fmt, options, writer);
+                    try writer.writeByte(' ');
+                }
+                try writer.writeAll(data.name);
                 try writer.writeByte(')');
             },
         }
@@ -137,6 +150,7 @@ pub const Type = union(enum) {
                 switch (ty2) {
                     .function => |inout2| {
                         var areEqual = true;
+                        if (!(inout1.inputs.len == inout2.inputs.len and inout1.outputs.len == inout2.outputs.len)) return false;
                         for (inout1.inputs) |_, i| {
                             if (!Type.eq(inout1.inputs[i], inout2.inputs[i])) {
                                 areEqual = false;
@@ -148,6 +162,22 @@ pub const Type = union(enum) {
                             }
                         }
 
+                        return areEqual;
+                    },
+                    else => {},
+                }
+            },
+            .operator => |op1| {
+                switch (ty2) {
+                    .operator => |op2| {
+                        if (!std.mem.eql(u8, op1.name, op2.name)) return false;
+                        if (op1.params.len != op2.params.len) return false;
+                        var areEqual = true;
+                        for (op1.params) |_, i| {
+                            if (!Type.eq(op1.params[i], op2.params[i])) {
+                                areEqual = false;
+                            }
+                        }
                         return areEqual;
                     },
                     else => {},
